@@ -1,0 +1,10 @@
+{
+  "type": "extension",
+  "id": "cm7om34l400agx50jq81udcmi",
+  "handle": "insider-analytics",
+  "name": "Insider-Analytics",
+  "package": {
+    "id": "cm7om34lu00aix50j4op7sg30",
+    "name": "@appmaker-packages/extension-insider-analytics"
+  }
+}
