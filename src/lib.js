@@ -1,13 +1,38 @@
-import { Platform, PermissionsAndroid } from 'react-native';
+import { Platform, PermissionsAndroid, NativeModules, NativeEventEmitter } from 'react-native';
 import RNInsider from 'react-native-insider';
 import InsiderCallbackType from 'react-native-insider/src/InsiderCallbackType';
 import RNInsiderIdentifier from 'react-native-insider/src/InsiderIdentifier';
 import messaging from '@react-native-firebase/messaging';
 import { appmaker } from '@appmaker-xyz/core';
 
+// -----------------------------
+// 🛠 iOS Crash Patch (Skip SESSION_STARTED on iOS)
+try {
+  const NotificationHandler = NativeModules.RNNotificationHandler;
+  const eventHandler = new NativeEventEmitter(NotificationHandler);
+
+  const originalAddListener = eventHandler.addListener;
+
+  eventHandler.addListener = function (eventType, listener) {
+    const unsupportedOnIOS = ['SESSION_STARTED'];
+
+    if (Platform.OS === 'ios' && unsupportedOnIOS.includes(eventType)) {
+      console.warn(`[Insider Patch] Skipping unsupported iOS event: ${eventType}`);
+      return { remove: () => {} }; // noop
+    }
+
+    return originalAddListener.call(this, eventType, listener);
+  };
+
+  console.log('[Insider Patch] EventEmitter patched to avoid SESSION_STARTED on iOS');
+} catch (err) {
+  console.warn('[Insider Patch] Failed to patch event emitter:', err);
+}
+// -----------------------------
+
 const analyticsSetProfile = (params) => {
-  let currentUser = RNInsider.getCurrentUser();
-  let identifiers = new RNInsiderIdentifier();
+  const currentUser = RNInsider.getCurrentUser();
+  const identifiers = new RNInsiderIdentifier();
 
   if (params?.email) identifiers.addEmail(params.email);
   if (params?.phone) identifiers.addPhoneNumber(params.phone);
@@ -60,37 +85,61 @@ const requestNotificationPermission = async () => {
   }
 };
 
-const registerInsiderFCMToken = async () => {
+const configureAnalytics = async () => {
+  await requestNotificationPermission();
+  await messaging().registerDeviceForRemoteMessages();
+
+  const supportedCallbacks = [
+    InsiderCallbackType.NOTIFICATION_OPEN,
+    InsiderCallbackType.INAPP_BUTTON_CLICK,
+    InsiderCallbackType.TEMP_STORE_PURCHASE,
+    InsiderCallbackType.TEMP_STORE_ADDED_TO_CART,
+    InsiderCallbackType.TEMP_STORE_CUSTOM_ACTION,
+    InsiderCallbackType.INAPP_SEEN,
+    InsiderCallbackType.FOREGROUND_PUSH,
+    InsiderCallbackType.INSIDER_ID_LISTENER,
+  ];
+
+  // Only use supported callbacks on iOS
+  const filteredCallbacks = Platform.OS === 'ios'
+    ? supportedCallbacks.filter(type =>
+        type !== InsiderCallbackType.SESSION_STARTED)
+    : supportedCallbacks;
+
+  RNInsider.init('mataharitest', 'group.com.useinsider.InsiderDemo', (type, data) => {
+    if (!filteredCallbacks.includes(type)) {
+      console.warn(`[Insider] Skipped unsupported callback type: ${type}`);
+      return;
+    }
+
+    console.log(`[INSIDER CALLBACK][${type}]`, data);
+  });
+
+  // Handle foreground push
+  if (RNInsider.setForegroundPushCallback) {
+    RNInsider.setForegroundPushCallback((userInfo) => {
+      console.log('[Insider] Foreground push received:', userInfo);
+      RNInsider.handleNotification(userInfo);
+    });
+  }
+
   try {
     const fcmToken = await messaging().getToken();
-    if (fcmToken) {
-      console.log('[Insider] FCM Token:', fcmToken);
-      RNInsider.registerFCMToken(fcmToken);
+    console.log('[Insider] FCM Token:', fcmToken);
+
+    if (Platform.OS === 'android') {
+      RNInsider.setHybridPushToken(fcmToken);
+      console.log('[Insider] setHybridPushToken used.');
     } else {
-      console.warn('[Insider] FCM token not available');
+      console.warn('[Insider] iOS push token setup skipped');
     }
+
+    await messaging().subscribeToTopic('general');
+    console.log('[Insider] Subscribed to general topic');
   } catch (error) {
-    console.error('[Insider] Failed to get FCM token', error);
+    console.error('[Insider] Failed to get/register FCM token:', error);
   }
 };
 
-const configureAnalytics = async () => {
-  await requestNotificationPermission();
-
-  RNInsider.init('mataharitest', 'group.com.useinsider.InsiderDemo', (type, data) => {
-    switch (type) {
-      case InsiderCallbackType.NOTIFICATION_OPEN:
-      case InsiderCallbackType.INAPP_BUTTON_CLICK:
-      case InsiderCallbackType.TEMP_STORE_PURCHASE:
-      case InsiderCallbackType.TEMP_STORE_ADDED_TO_CART:
-      case InsiderCallbackType.TEMP_STORE_CUSTOM_ACTION:
-        console.log(`[INSIDER CALLBACK][${type}]`, data);
-        break;
-    }
-  });
-
-  // After init, register the FCM token
-  await registerInsiderFCMToken();
-};
 
 export { analyticsSetProfile, configureAnalytics, recordEvent };
