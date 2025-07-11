@@ -1,5 +1,5 @@
 import { shopifyIdHelper } from '@appmaker-xyz/shopify';
-import { analytics } from '@appmaker-xyz/core';
+import { analytics, appmaker } from '@appmaker-xyz/core';
 import { analyticsSetProfile, recordEvent } from './lib';
 import RNInsider from 'react-native-insider';
 import RNInsiderIdentifier from 'react-native-insider/src/InsiderIdentifier';
@@ -13,17 +13,21 @@ const activateEvents = () => {
     'inapp-page-data-response',
     `namespace`, // namespace
     (data, { pageId }) => {
-      console.log('pageId from [insider]', pageId);
-      console.log('data:', JSON.stringify(data));
+      // console.log('pageId from [insider]', pageId);
 
       switch (pageId) {
         case 'home':
           RNInsider.visitHomePage();
           break;
-
-        case 'productList':
-          const details = Object.values(params);
-          RNInsider.visitListingPage(details);
+        case 'categories':
+          RNInsider.tagEvent('categories_view')
+            .addParameterWithString('src', 'bottom_tab')
+            .build();
+          break;
+        case 'brands':
+          RNInsider.tagEvent('brands_view')
+            .addParameterWithString('src', 'bottom_tab')
+            .build();
           break;
       }
       return data;
@@ -47,32 +51,40 @@ const activateEvents = () => {
   };
 
   analytics.onTrack((event, params, context) => {
-    console.log(
-      `
-================================================================================================================
-EVENT:       ${event}`,
-    );
-    console.log(
-      `- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-    eventParams  
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
-      `
-      ${JSON.stringify(params)}
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
-    );
-    console.log(
-      `- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-    CONTEXT  
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
-      `
-      ${JSON.stringify(context)}
-================================================================================================================`,
-    );
+    //     if (process.env.NODE_ENV === 'development') {
+    //       console.log(
+    //         `
+    // ================================================================================================================
+    // event:       ${event}`,
+    //       );
+    //       console.log(
+    //         `- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    //     params
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
+    //         `
+    //       ${JSON.stringify(params)}
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
+    //       );
+    //       console.log(
+    //         `- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    //     CONTEXT
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
+    //         `
+    //       ${JSON.stringify(context)}
+    // ================================================================================================================`,
+    //       );
+    //     }
 
     switch (event) {
+      case 'appmaker_block_click':
+        break;
       case 'product_added_to_cart':
         let productAdded = mapShopifyProductToInsider(context?.product);
         RNInsider.itemAddedToCart(productAdded);
+        break;
+      case 'update_cart':
+        let productAddedFromCart = mapShopifyProductToInsider(context?.product);
+        RNInsider.itemAddedToCart(productAddedFromCart);
         break;
 
       case 'collection_view':
@@ -84,6 +96,12 @@ EVENT:       ${event}`,
           params?.collectionId,
         ].filter(Boolean);
         RNInsider.visitListingPage(taxanomy);
+
+        RNInsider.tagEvent('pcp_view')
+          .addParameterWithString('pcp_title', params?.title ?? 'NA')
+          .addParameterWithString('category_id', params?.collectionId ?? 'NA')
+          .addParameterWithString('src', context?.pageId?.pageId ?? 'NA')
+          .build();
         break;
 
       case 'user_login':
@@ -95,13 +113,38 @@ EVENT:       ${event}`,
         break;
 
       case 'remove_from_cart':
-        let removedProduct = mapShopifyProductToInsider(context?.product);
-        RNInsider.itemAddedToCart(removedProduct);
+        RNInsider.itemRemovedFromCart(context?.product?.id ?? 'NA');
         break;
 
       case 'product_viewed':
+        if (!context?.product) break;
+
         const formattedObject = mapShopifyProductToInsider(context?.product);
-        console.log('productDetail finalData:', formattedObject);
+
+        RNInsider.tagEvent('pdp_view')
+          .addParameterWithString(
+            'category',
+            context?.product?.productType ?? 'NA',
+          )
+          .addParameterWithString('product_title', context?.product?.title)
+          .addParameterWithString('pcp_type', context?.product?.productType)
+          .addParameterWithString('pcp_title', context?.product?.title)
+          .addParameterWithString('product_id', context?.product?.id)
+          .addParameterWithDouble(
+            'price',
+            parseFloat(
+              context?.product?.priceRange?.maxVariantPrice?.amount ?? '0',
+            ),
+          )
+          .addParameterWithString('src', context?.pageId?.pageId ?? 'NA')
+          .addParameterWithString(
+            'sku',
+            context?.variant?.sku ??
+              context?.product?.variants?.edges?.[0]?.node?.sku ??
+              'NA',
+          )
+          .addParameterWithString('product_id', context?.product?.id)
+          .build();
 
         RNInsider.visitProductDetailPage(formattedObject);
         break;

@@ -1,9 +1,10 @@
 import RNInsider from 'react-native-insider';
+import { shopifyIdHelper } from '@appmaker-xyz/shopify';
 
 export function mapShopifyProductToInsider(shopifyProduct) {
   if (!shopifyProduct || typeof shopifyProduct !== 'object') return null;
 
-  const id = shopifyProduct.id?.split('/').pop() || '';
+  const id = shopifyIdHelper(shopifyProduct.id, true);
   const name = shopifyProduct.title || '';
   const taxonomy = shopifyProduct.productType
     ? [shopifyProduct.productType]
@@ -30,7 +31,7 @@ export function mapLineItemToInsiderProduct(lineItem) {
   const product = lineItem.variant?.product || {};
   const variant = lineItem.variant || {};
 
-  const productID = product.id?.split('/').pop() || '';
+  const productID = shopifyIdHelper(product.id, true);
   const name = lineItem.title || '';
   const taxonomy = product.productType ? [product.productType] : [];
   const imageURL = product.images?.edges?.[0]?.node?.url || '';
