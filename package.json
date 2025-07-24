@@ -1,10 +1,10 @@
 {
     "name": "@appmaker-packages/extension-insider-analytics",
-    "version": "1.0.30",
+    "version": "1.0.31",
     "main": "src/index.js",
     "description": "Appmaker",
     "peerDependencies": {
-        "react-native-insider": "6.7.0-nh",
+        "react-native-insider": "6.3.0-nh",
         "@react-native-firebase/messaging": "^19.2.2"
     },
     "dependencies": {},
