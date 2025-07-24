@@ -4,7 +4,7 @@
     "main": "src/index.js",
     "description": "Appmaker",
     "peerDependencies": {
-        "react-native-insider": "6.4.5",
+        "react-native-insider": "6.7.0-nh",
         "@react-native-firebase/messaging": "^19.2.2"
     },
     "dependencies": {},

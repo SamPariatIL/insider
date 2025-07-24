@@ -1,4 +1,3 @@
-import { shopifyIdHelper } from '@appmaker-xyz/shopify';
 import { analytics, appmaker } from '@appmaker-xyz/core';
 import { analyticsSetProfile, recordEvent } from './lib';
 import RNInsider from 'react-native-insider';
