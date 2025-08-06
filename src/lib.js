@@ -4,6 +4,7 @@ import InsiderCallbackType from 'react-native-insider/src/InsiderCallbackType';
 import RNInsiderIdentifier from 'react-native-insider/src/InsiderIdentifier';
 import messaging from '@react-native-firebase/messaging';
 import { appmaker } from '@appmaker-xyz/core';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // -----------------------------
 // 🛠 iOS Crash Patch (Skip SESSION_STARTED on iOS)
@@ -124,8 +125,8 @@ const configureAnalytics = async () => {
   }
 
   try {
-    const fcmToken = await messaging().getToken();
-    console.log('[Insider] FCM Token:', fcmToken);
+    const fcmToken = await AsyncStorage.getItem('fcm_token');
+  
 
     if (Platform.OS === 'android') {
       RNInsider.setHybridPushToken(fcmToken);

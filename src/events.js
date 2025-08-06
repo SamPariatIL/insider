@@ -5,6 +5,7 @@ import RNInsiderIdentifier from 'react-native-insider/src/InsiderIdentifier';
 import {
   mapLineItemToInsiderProduct,
   mapShopifyProductToInsider,
+  trackPurchaseWithInsider,
 } from './helpers';
 
 const activateEvents = () => {
@@ -42,7 +43,7 @@ const activateEvents = () => {
     if (params?.id) identifiers.addUserID(params.id);
 
     currentUser.login(identifiers);
-    currentUser.build();
+    currentUser?.build?.();
   };
 
   const sendUserLogout = () => {
@@ -176,7 +177,18 @@ const activateEvents = () => {
         break;
 
       case 'checkout_completed':
-        console.log('checkout_completed');
+        const firstLineItem = context?.cart?.lineItems?.edges?.[0]?.node;
+
+        const checkoutProduct = mapLineItemToInsiderProduct(firstLineItem);
+
+        RNInsider.itemPurchased(
+          context?.eventParams?.id ??
+            context?.eventParams?.order_number ??
+            context?.eventParams?.order_name,
+          checkoutProduct,
+        );
+
+        trackPurchaseWithInsider(context);
         break;
 
       case 'view_item_list':

@@ -1,6 +1,6 @@
 {
     "name": "@appmaker-packages/extension-insider-analytics",
-    "version": "1.0.31",
+    "version": "1.0.34",
     "main": "src/index.js",
     "description": "Appmaker",
     "peerDependencies": {
