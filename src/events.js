@@ -7,6 +7,7 @@ import {
   mapShopifyProductToInsider,
   trackPurchaseWithInsider,
 } from './helpers';
+import { Platform } from 'react-native';
 
 const activateEvents = () => {
   appmaker.addFilter(
@@ -21,12 +22,12 @@ const activateEvents = () => {
           break;
         case 'categories':
           RNInsider.tagEvent('categories_view')
-            .addParameterWithString('src', 'bottom_tab')
+            .addParameterWithString('src', Platform.OS)
             .build();
           break;
         case 'brands':
           RNInsider.tagEvent('brands_view')
-            .addParameterWithString('src', 'bottom_tab')
+            .addParameterWithString('src', Platform.OS)
             .build();
           break;
       }
@@ -102,6 +103,11 @@ const activateEvents = () => {
           .addParameterWithString('category_id', params?.collectionId ?? 'NA')
           .addParameterWithString('src', context?.pageId?.pageId ?? 'NA')
           .build();
+
+        RNInsider.tagEvent('categories_view')
+          .addParameterWithString('src', Platform.OS)
+          .build();
+
         break;
 
       case 'user_login':
@@ -207,13 +213,25 @@ const activateEvents = () => {
         break;
 
       case 'product_search':
-        console.log('product_search');
+        RNInsider.tagEvent('search')
+          .addParameterWithString('keyword', params?.query)
+          .addParameterWithString('src', Platform.OS)
+          .build();
         break;
 
       case 'product_added_to_wishlist':
-        let productAddedToWishlist = mapShopifyProductToInsider(
-          context?.product,
-        );
+        let { product, variant } = context || {};
+
+        RNInsider.tagEvent('wishlist')
+          .addParameterWithString(
+            'image_url',
+            variant?.node?.image?.url ?? 'NA',
+          )
+          .addParameterWithString('sku_parent', variant?.node?.sku ?? 'NA')
+          .addParameterWithString('product_title', product?.title ?? 'NA')
+          .addParameterWithString('src', Platform.OS)
+          .addParameterWithString('product', product?.id ?? 'NA')
+          .build();
 
         console.log('product_added_to_wishlist');
         break;
