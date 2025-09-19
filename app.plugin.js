@@ -225,18 +225,71 @@ function withAppDelegateDotMM(config) {
         'utf8',
       );
 
-      appDelegateDotMMContent = appDelegateDotMMContent.replace(
-        `
+      if (
+        !appDelegateDotMMContent.includes(
+          '#import <UserNotifications/UserNotifications.h>',
+        )
+      ) {
+        appDelegateDotMMContent = appDelegateDotMMContent.replace(
+          `
+#import <React/RCTLinkingManager.h>
+`,
+          `
+#import <React/RCTLinkingManager.h>
+#import <UserNotifications/UserNotifications.h>
+`,
+        );
+      }
+
+      if (
+        !appDelegateDotMMContent.includes(
+          'UNUserNotificationCenter.currentNotificationCenter.delegate = self;',
+        )
+      ) {
+        appDelegateDotMMContent = appDelegateDotMMContent.replace(
+          `
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 `,
-        `
+          `
   UNUserNotificationCenter.currentNotificationCenter.delegate = self;
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 `,
-      );
+        );
+      }
 
       fs.writeFileSync(appDelegateDotMMPath, appDelegateDotMMContent);
+
+      return config;
+    },
+  ]);
+}
+
+function withAppDelegateDotH(config) {
+  return withDangerousMod(config, [
+    'ios',
+    (config) => {
+      const appDelegateDotHPath = path.join(
+        config.modRequest.projectRoot,
+        'ios',
+        'AppmakerRuntime',
+        'AppDelegate.h',
+      );
+
+      let appDelegateDotHContent = fs.readFileSync(appDelegateDotHPath, 'utf8');
+
+      if (
+        !appDelegateDotHContent.includes(
+          '@interface AppDelegate : EXAppDelegateWrapper <UNUserNotificationCenterDelegate>',
+        )
+      ) {
+        appDelegateDotHContent = appDelegateDotHContent.replace(
+          '@interface AppDelegate : EXAppDelegateWrapper',
+          '@interface AppDelegate : EXAppDelegateWrapper <UNUserNotificationCenterDelegate>',
+        );
+      }
+
+      fs.writeFileSync(appDelegateDotHPath, appDelegateDotHContent);
 
       return config;
     },
@@ -252,5 +305,6 @@ module.exports = function withCustom(config) {
     withInsiderDependencies,
     withProguardRules,
     withAppDelegateDotMM,
+    withAppDelegateDotH,
   ]);
 };

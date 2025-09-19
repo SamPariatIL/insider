@@ -1,14 +1,14 @@
 {
-    "name": "@appmaker-packages/extension-insider-analytics",
-    "version": "1.0.35",
-    "main": "src/index.js",
-    "description": "Appmaker",
-    "peerDependencies": {
-        "react-native-insider": "6.3.0-nh",
-        "@react-native-firebase/messaging": "^19.2.2"
-    },
-    "dependencies": {},
-    "expo_plugins": [
-        "@appmaker-packages/extension-insider-analytics/app.plugin.js"
-    ]
+  "name": "@appmaker-packages/extension-insider-analytics",
+  "version": "1.0.41",
+  "main": "src/index.js",
+  "description": "Appmaker",
+  "peerDependencies": {
+    "react-native-insider": "6.8.3-nh",
+    "@react-native-firebase/messaging": "^19.2.2"
+  },
+  "dependencies": {},
+  "expo_plugins": [
+    "@appmaker-packages/extension-insider-analytics/app.plugin.js"
+  ]
 }
