@@ -1,5 +1,5 @@
-import RNInsider from 'react-native-insider';
 import { shopifyIdHelper } from '@appmaker-xyz/shopify';
+import RNInsider from 'react-native-insider';
 
 export function mapShopifyProductToInsider(shopifyProduct) {
   if (!shopifyProduct || typeof shopifyProduct !== 'object') return null;

@@ -1,13 +1,15 @@
-import { analytics, appmaker } from '@appmaker-xyz/core';
-import { analyticsSetProfile, recordEvent } from './lib';
+import { addFilter, analytics, appmaker } from '@appmaker-xyz/core';
+import { Platform } from 'react-native';
 import RNInsider from 'react-native-insider';
 import RNInsiderIdentifier from 'react-native-insider/src/InsiderIdentifier';
+
+import { InsiderAnalyticsInAppNotificationComponent } from './components';
 import {
   mapLineItemToInsiderProduct,
   mapShopifyProductToInsider,
   trackPurchaseWithInsider,
 } from './helpers';
-import { Platform } from 'react-native';
+import { analyticsSetProfile } from './lib';
 
 const activateEvents = () => {
   appmaker.addFilter(
@@ -265,5 +267,14 @@ const activateEvents = () => {
     analyticsSetProfile(params);
   });
 };
+
+addFilter(
+  'app-custom-root-components',
+  'insider-analytics-inapp-notification',
+  (currentComponents) => {
+    currentComponents?.push(InsiderAnalyticsInAppNotificationComponent);
+    return currentComponents;
+  },
+);
 
 export { activateEvents };

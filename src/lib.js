@@ -1,10 +1,15 @@
-import { Platform, PermissionsAndroid, NativeModules, NativeEventEmitter } from 'react-native';
+import { appmaker } from '@appmaker-xyz/core';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import messaging from '@react-native-firebase/messaging';
+import {
+  NativeEventEmitter,
+  NativeModules,
+  PermissionsAndroid,
+  Platform,
+} from 'react-native';
 import RNInsider from 'react-native-insider';
 import InsiderCallbackType from 'react-native-insider/src/InsiderCallbackType';
 import RNInsiderIdentifier from 'react-native-insider/src/InsiderIdentifier';
-import messaging from '@react-native-firebase/messaging';
-import { appmaker } from '@appmaker-xyz/core';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // -----------------------------
 // 🛠 iOS Crash Patch (Skip SESSION_STARTED on iOS)
@@ -18,14 +23,18 @@ try {
     const unsupportedOnIOS = ['SESSION_STARTED'];
 
     if (Platform.OS === 'ios' && unsupportedOnIOS.includes(eventType)) {
-      console.warn(`[Insider Patch] Skipping unsupported iOS event: ${eventType}`);
+      console.warn(
+        `[Insider Patch] Skipping unsupported iOS event: ${eventType}`,
+      );
       return { remove: () => {} }; // noop
     }
 
     return originalAddListener.call(this, eventType, listener);
   };
 
-  console.log('[Insider Patch] EventEmitter patched to avoid SESSION_STARTED on iOS');
+  console.log(
+    '[Insider Patch] EventEmitter patched to avoid SESSION_STARTED on iOS',
+  );
 } catch (err) {
   console.warn('[Insider Patch] Failed to patch event emitter:', err);
 }
@@ -54,10 +63,14 @@ const recordEvent = async (eventName, params, eventObject) => {
     const insiderEvent = RNInsider.tagEvent(insiderEventData?.eventName);
 
     Object.entries(insiderEventData?.params || {}).forEach(([key, value]) => {
-      if (typeof value === 'string') insiderEvent.addParameterWithString(key, value);
-      else if (typeof value === 'boolean') insiderEvent.addParameterWithBoolean(key, value);
-      else if (typeof value === 'number') insiderEvent.addParameterWithDouble(key, value);
-      else if (value instanceof Date) insiderEvent.addParameterWithDate(key, value);
+      if (typeof value === 'string')
+        insiderEvent.addParameterWithString(key, value);
+      else if (typeof value === 'boolean')
+        insiderEvent.addParameterWithBoolean(key, value);
+      else if (typeof value === 'number')
+        insiderEvent.addParameterWithDouble(key, value);
+      else if (value instanceof Date)
+        insiderEvent.addParameterWithDate(key, value);
     });
 
     insiderEvent.build();
@@ -72,10 +85,11 @@ const requestNotificationPermission = async () => {
       PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       {
         title: 'Notification Permission',
-        message: 'This app needs notification permission to receive alerts and updates.',
+        message:
+          'This app needs notification permission to receive alerts and updates.',
         buttonPositive: 'Allow',
         buttonNegative: 'Deny',
-      }
+      },
     );
 
     if (granted === PermissionsAndroid.RESULTS.GRANTED) {
@@ -102,19 +116,25 @@ const configureAnalytics = async () => {
   ];
 
   // Only use supported callbacks on iOS
-  const filteredCallbacks = Platform.OS === 'ios'
-    ? supportedCallbacks.filter(type =>
-        type !== InsiderCallbackType.SESSION_STARTED)
-    : supportedCallbacks;
+  const filteredCallbacks =
+    Platform.OS === 'ios'
+      ? supportedCallbacks.filter(
+          (type) => type !== InsiderCallbackType.SESSION_STARTED,
+        )
+      : supportedCallbacks;
 
-  RNInsider.init('mataharitest', 'group.com.useinsider.InsiderDemo', (type, data) => {
-    if (!filteredCallbacks.includes(type)) {
-      console.warn(`[Insider] Skipped unsupported callback type: ${type}`);
-      return;
-    }
+  RNInsider.init(
+    'mataharitest',
+    'group.com.useinsider.InsiderDemo',
+    (type, data) => {
+      if (!filteredCallbacks.includes(type)) {
+        console.warn(`[Insider] Skipped unsupported callback type: ${type}`);
+        return;
+      }
 
-    console.log(`[INSIDER CALLBACK][${type}]`, data);
-  });
+      console.log(`[INSIDER CALLBACK][${type}]`, data);
+    },
+  );
 
   // Handle foreground push
   if (RNInsider.setForegroundPushCallback) {
@@ -126,7 +146,6 @@ const configureAnalytics = async () => {
 
   try {
     const fcmToken = await AsyncStorage.getItem('fcm_token');
-  
 
     if (Platform.OS === 'android') {
       RNInsider.setHybridPushToken(fcmToken);
@@ -141,6 +160,5 @@ const configureAnalytics = async () => {
     console.error('[Insider] Failed to get/register FCM token:', error);
   }
 };
-
 
 export { analyticsSetProfile, configureAnalytics, recordEvent };

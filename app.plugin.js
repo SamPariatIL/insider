@@ -17,7 +17,7 @@ function withGoogleServicesJson(config) {
         config.modRequest.projectRoot,
         'android',
         'app',
-        'google-services.json'
+        'google-services.json',
       );
 
       const googleServicesJsonContent = `{
@@ -73,13 +73,19 @@ function withCustomAndroidManifest(config) {
       'android.permission.ACCESS_FINE_LOCATION',
       'android.permission.ACCESS_COARSE_LOCATION',
       'android.permission.ACCESS_BACKGROUND_LOCATION',
-      'android.permission.POST_NOTIFICATIONS'
+      'android.permission.POST_NOTIFICATIONS',
     ];
 
     manifest.manifest['uses-permission'] ||= [];
     permissions.forEach((perm) => {
-      if (!manifest.manifest['uses-permission'].some(p => p.$['android:name'] === perm)) {
-        manifest.manifest['uses-permission'].push({ $: { 'android:name': perm } });
+      if (
+        !manifest.manifest['uses-permission'].some(
+          (p) => p.$['android:name'] === perm,
+        )
+      ) {
+        manifest.manifest['uses-permission'].push({
+          $: { 'android:name': perm },
+        });
       }
     });
 
@@ -101,7 +107,7 @@ function withCustomAndroidManifest(config) {
 function withInsiderStrings(config) {
   return withStringsXml(config, async (config) => {
     const exists = config.modResults.resources?.string?.some(
-      item => item.$?.name === 'insider_notification_icon'
+      (item) => item.$?.name === 'insider_notification_icon',
     );
 
     if (!exists) {
@@ -123,8 +129,8 @@ function withMavenRepos(config) {
 
     if (!config.modResults.contents.includes('mobilesdk.useinsider.com')) {
       config.modResults.contents = config.modResults.contents.replace(
-        /allprojects\s*{[^}]*repositories\s*{/, 
-        (match) => `${match}${snippet}`
+        /allprojects\s*{[^}]*repositories\s*{/,
+        (match) => `${match}${snippet}`,
       );
     }
 
@@ -139,7 +145,7 @@ function withInsiderDependencies(config) {
       `implementation 'com.useinsider:insiderhybrid:1.1.5'`,
       `implementation 'com.huawei.hms:push:6.5.0.300'`,
       `implementation 'com.huawei.hms:ads-identifier:3.4.39.302'`,
-      `implementation 'com.huawei.hms:location:6.4.0.300'`
+      `implementation 'com.huawei.hms:location:6.4.0.300'`,
     ];
 
     config.modResults.contents = config.modResults.contents.replace(
@@ -148,20 +154,27 @@ function withInsiderDependencies(config) {
         if (!p1.includes('manifestPlaceholders')) {
           return match.replace(
             p1,
-            `${p1}\n        manifestPlaceholders = [partner: \"mataharitest\"]`
+            `${p1}\n        manifestPlaceholders = [partner: \"mataharitest\"]`,
           );
         }
         return match;
-      }
+      },
     );
 
     config.modResults.contents = config.modResults.contents.replace(
       /dependencies\s*{([\s\S]*?)\n}/,
       (match, existingDeps) => {
-        const depSet = new Set(existingDeps.trim().split('\n').map(d => d.trim()));
-        const newDeps = dependencies.filter(d => !depSet.has(d.trim()));
-        return `dependencies {\n${existingDeps}${newDeps.length ? '\n' + newDeps.join('\n') : ''}\n}`;
-      }
+        const depSet = new Set(
+          existingDeps
+            .trim()
+            .split('\n')
+            .map((d) => d.trim()),
+        );
+        const newDeps = dependencies.filter((d) => !depSet.has(d.trim()));
+        return `dependencies {\n${existingDeps}${
+          newDeps.length ? '\n' + newDeps.join('\n') : ''
+        }\n}`;
+      },
     );
 
     return config;
@@ -176,7 +189,7 @@ function withProguardRules(config) {
         config.modRequest.projectRoot,
         'android',
         'app',
-        'proguard-rules.pro'
+        'proguard-rules.pro',
       );
 
       const rules = `
@@ -196,6 +209,40 @@ function withProguardRules(config) {
   ]);
 }
 
+function withAppDelegateDotMM(config) {
+  return withDangerousMod(config, [
+    'ios',
+    (config) => {
+      const appDelegateDotMMPath = path.join(
+        config.modRequest.projectRoot,
+        'ios',
+        'AppmakerRuntime',
+        'AppDelegate.mm',
+      );
+
+      let appDelegateDotMMContent = fs.readFileSync(
+        appDelegateDotMMPath,
+        'utf8',
+      );
+
+      appDelegateDotMMContent = appDelegateDotMMContent.replace(
+        `
+  return [super application:application didFinishLaunchingWithOptions:launchOptions];
+`,
+        `
+  UNUserNotificationCenter.currentNotificationCenter.delegate = self;
+
+  return [super application:application didFinishLaunchingWithOptions:launchOptions];
+`,
+      );
+
+      fs.writeFileSync(appDelegateDotMMPath, appDelegateDotMMContent);
+
+      return config;
+    },
+  ]);
+}
+
 module.exports = function withCustom(config) {
   return withPlugins(config, [
     withGoogleServicesJson,
@@ -204,5 +251,6 @@ module.exports = function withCustom(config) {
     withMavenRepos,
     withInsiderDependencies,
     withProguardRules,
+    withAppDelegateDotMM,
   ]);
 };

@@ -1,7 +1,21 @@
-import { configureAnalytics } from './lib';
-import { activateEvents } from './events';
 import { appmaker, onEvent } from '@appmaker-xyz/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import messaging from '@react-native-firebase/messaging';
+import RNInsider from 'react-native-insider';
+
+import { activateEvents } from './events';
+import { configureAnalytics } from './lib';
+
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  console.log(
+    'Inside Insider Analytics: Message handled in the background ==>' +
+      JSON.stringify(remoteMessage),
+  );
+
+  if ((remoteMessage.data || {}).source === 'Insider') {
+    RNInsider.handleNotification(remoteMessage.data);
+  }
+});
 
 export function activate({ settings }) {
   onEvent('on_fcm_token', async (fcmToken) => {
