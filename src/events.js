@@ -1,4 +1,5 @@
 import { addFilter, analytics, appmaker } from '@appmaker-xyz/core';
+import { shopifyIdHelper } from '@appmaker-xyz/shopify';
 import { Platform } from 'react-native';
 import RNInsider from 'react-native-insider';
 import RNInsiderIdentifier from 'react-native-insider/src/InsiderIdentifier';
@@ -9,15 +10,12 @@ import {
   mapShopifyProductToInsider,
   trackPurchaseWithInsider,
 } from './helpers';
-import { analyticsSetProfile } from './lib';
 
 const activateEvents = () => {
   appmaker.addFilter(
     'inapp-page-data-response',
-    `namespace`, // namespace
+    'namespace',
     (data, { pageId }) => {
-      // console.log('pageId from [insider]', pageId);
-
       switch (pageId) {
         case 'home':
           RNInsider.visitHomePage();
@@ -37,57 +35,96 @@ const activateEvents = () => {
     },
   );
 
-  const sendUserLogin = (params) => {
-    const currentUser = RNInsider.getCurrentUser();
-    const identifiers = new RNInsiderIdentifier();
+  /**
+   * Send user login event to Insider
+   * @param {Record<string, any>} params
+   * @param {Record<string, any>} context
+   */
+  const sendUserLogin = (params, context) => {
+    try {
+      let identifiers = new RNInsiderIdentifier();
 
-    if (params?.email) identifiers.addEmail(params.email);
-    if (params?.phone) identifiers.addPhoneNumber(params.phone);
-    if (params?.id) identifiers.addUserID(params.id);
+      if (params.email) {
+        identifiers.addEmail(params.email);
+      }
 
-    currentUser.login(identifiers);
-    currentUser?.build?.();
+      if (params.phone) {
+        identifiers.addPhoneNumber(params.phone);
+      }
+
+      if (params.id) {
+        identifiers.addUserID(shopifyIdHelper(params.id, true));
+      }
+
+      let currentUser = RNInsider.getCurrentUser();
+      currentUser.login(identifiers);
+
+      if (context.customer?.firstName) {
+        currentUser.setName(context.customer.firstName);
+      }
+
+      if (context.customer?.lastName) {
+        currentUser.setSurname(context.customer.lastName);
+      }
+    } catch (error) {
+      console.log('[Insider][sendUserLogin] Error:', error);
+    }
   };
 
+  /**
+   * Send user logout event to Insider
+   */
   const sendUserLogout = () => {
-    RNInsider.getCurrentUser().logout();
+    try {
+      RNInsider.getCurrentUser().logout();
+    } catch (error) {
+      console.log('[Insider][sendUserLogout] Error:', error);
+    }
   };
 
+  /**
+   * Track event from analytics
+   * @param {string} event
+   * @param {Record<string, any>} params
+   * @param {Record<string, any>} context
+   */
   analytics.onTrack((event, params, context) => {
-    //     if (process.env.NODE_ENV === 'development') {
-    //       console.log(
-    //         `
-    // ================================================================================================================
-    // event:       ${event}`,
-    //       );
-    //       console.log(
-    //         `- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    //     params
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
-    //         `
-    //       ${JSON.stringify(params)}
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
-    //       );
-    //       console.log(
-    //         `- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    //     CONTEXT
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
-    //         `
-    //       ${JSON.stringify(context)}
-    // ================================================================================================================`,
-    //       );
-    //     }
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `
+    ================================================================================================================
+    EVENT:       ${event}`,
+      );
+      console.log(
+        `- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        PARAMS
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
+        `
+          ${JSON.stringify(params)}
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
+      );
+      console.log(
+        `- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        CONTEXT
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - `,
+        `
+          ${JSON.stringify(context)}
+    ================================================================================================================`,
+      );
+    }
 
     switch (event) {
       case 'appmaker_block_click':
         break;
+
       case 'product_added_to_cart':
         let productAdded = mapShopifyProductToInsider(context?.product);
         RNInsider.itemAddedToCart(productAdded);
         break;
-      case 'update_cart':
-        let productAddedFromCart = mapShopifyProductToInsider(context?.product);
-        RNInsider.itemAddedToCart(productAddedFromCart);
+
+      case 'product_removed_from_cart':
+        let productRemoved = mapShopifyProductToInsider(context?.product);
+        RNInsider.itemRemovedFromCart(productRemoved);
         break;
 
       case 'collection_view':
@@ -99,21 +136,6 @@ const activateEvents = () => {
           params?.collectionId,
         ].filter(Boolean);
         RNInsider.visitListingPage(taxanomy);
-
-        RNInsider.tagEvent('pcp_view')
-          .addParameterWithString('pcp_title', params?.title ?? 'NA')
-          .addParameterWithString('category_id', params?.collectionId ?? 'NA')
-          .addParameterWithString('src', context?.pageId?.pageId ?? 'NA')
-          .build();
-
-        RNInsider.tagEvent('categories_view')
-          .addParameterWithString('src', Platform.OS)
-          .build();
-
-        break;
-
-      case 'user_login':
-        sendUserLogin(params);
         break;
 
       case 'user_logout':
@@ -128,32 +150,6 @@ const activateEvents = () => {
         if (!context?.product) break;
 
         const formattedObject = mapShopifyProductToInsider(context?.product);
-
-        RNInsider.tagEvent('pdp_view')
-          .addParameterWithString(
-            'category',
-            context?.product?.productType ?? 'NA',
-          )
-          .addParameterWithString('product_title', context?.product?.title)
-          .addParameterWithString('pcp_type', context?.product?.productType)
-          .addParameterWithString('pcp_title', context?.product?.title)
-          .addParameterWithString('product_id', context?.product?.id)
-          .addParameterWithDouble(
-            'price',
-            parseFloat(
-              context?.product?.priceRange?.maxVariantPrice?.amount ?? '0',
-            ),
-          )
-          .addParameterWithString('src', context?.pageId?.pageId ?? 'NA')
-          .addParameterWithString(
-            'sku',
-            context?.variant?.sku ??
-              context?.product?.variants?.edges?.[0]?.node?.sku ??
-              'NA',
-          )
-          .addParameterWithString('product_id', context?.product?.id)
-          .build();
-
         RNInsider.visitProductDetailPage(formattedObject);
         break;
 
@@ -168,12 +164,7 @@ const activateEvents = () => {
       case 'checkout_started':
         break;
 
-      case 'user_login':
-        console.log('user_login');
-        break;
-
       case 'user_logout':
-        console.log('user_logout');
         break;
 
       case 'user_register':
@@ -181,7 +172,6 @@ const activateEvents = () => {
         break;
 
       case 'checkout_started':
-        console.log('checkout_started');
         break;
 
       case 'checkout_completed':
@@ -200,7 +190,6 @@ const activateEvents = () => {
         break;
 
       case 'view_item_list':
-        console.log('view_item_list');
         break;
 
       case 'view_cart':
@@ -235,27 +224,21 @@ const activateEvents = () => {
           .addParameterWithString('product', product?.id ?? 'NA')
           .build();
 
-        console.log('product_added_to_wishlist');
         break;
 
       case 'product_removed_from_wishlist':
-        console.log('product_removed_from_wishlist');
         break;
 
       case 'shareProduct':
-        console.log('shareProduct');
         break;
 
       case 'sortApply':
-        console.log('sortApply');
         break;
 
       case 'ApplyFilter':
-        console.log('ApplyFilter');
         break;
 
       case 'drawerCategoryClick':
-        console.log('drawerCategoryClick');
         break;
 
       default:
@@ -263,8 +246,13 @@ const activateEvents = () => {
     }
   }, 'insider-analytics');
 
-  analytics.onIdentify((userId, params) => {
-    analyticsSetProfile(params);
+  /**
+   * Send user identify event
+   * @param {Record<string, any>} params
+   * @param {Record<string, any>} context
+   */
+  analytics.onIdentify((_, params, context) => {
+    sendUserLogin(params, context);
   });
 };
 

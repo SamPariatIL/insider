@@ -148,6 +148,27 @@ function withInsiderDependencies(config) {
       `implementation 'com.huawei.hms:location:6.4.0.300'`,
     ];
 
+    // Add Google Play Core conflict resolution
+    const configurationsBlock = `
+configurations.all {
+    exclude group: 'com.google.android.play', module: 'core'
+    resolutionStrategy {
+        force 'com.google.android.play:core-common:2.0.2'
+        force 'com.google.android.play:review:2.0.1'
+        force 'com.google.android.play:app-update:2.1.0'
+    }
+}`;
+
+    // Add configurations block to exclude conflicting Play Core dependencies
+    if (!config.modResults.contents.includes('configurations.all')) {
+      config.modResults.contents = config.modResults.contents.replace(
+        /android\s*{([\s\S]*?)\n}/,
+        (match, androidContent) => {
+          return `android {${androidContent}\n}\n\n${configurationsBlock}`;
+        },
+      );
+    }
+
     config.modResults.contents = config.modResults.contents.replace(
       /defaultConfig\s*{([\s\S]*?)}/,
       (match, p1) => {
@@ -161,6 +182,16 @@ function withInsiderDependencies(config) {
       },
     );
 
+    // Add dependency exclusions to prevent Play Core conflicts
+    const dependencyExclusions = `
+    implementation('com.google.android.play:core-common:2.0.2') {
+        exclude group: 'com.google.android.play', module: 'core'
+    }
+    implementation('com.google.android.play:review:2.0.1') {
+        exclude group: 'com.google.android.play', module: 'core'
+    }
+`;
+
     config.modResults.contents = config.modResults.contents.replace(
       /dependencies\s*{([\s\S]*?)\n}/,
       (match, existingDeps) => {
@@ -171,8 +202,19 @@ function withInsiderDependencies(config) {
             .map((d) => d.trim()),
         );
         const newDeps = dependencies.filter((d) => !depSet.has(d.trim()));
+
+        // Add Play Core exclusions if not already present
+        const allDeps = [...newDeps];
+        if (
+          !existingDeps.includes(
+            "exclude group: 'com.google.android.play', module: 'core'",
+          )
+        ) {
+          allDeps.push(dependencyExclusions);
+        }
+
         return `dependencies {\n${existingDeps}${
-          newDeps.length ? '\n' + newDeps.join('\n') : ''
+          allDeps.length ? '\n' + allDeps.join('\n') : ''
         }\n}`;
       },
     );

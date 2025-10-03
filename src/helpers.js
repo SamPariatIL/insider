@@ -62,13 +62,6 @@ export function trackPurchaseWithInsider(context) {
   const total = parseFloat(cart?.totalPrice?.amount || '0');
   const totalDiscount = String(subtotal - total);
 
-  const productIds = lineItems
-    ?.map((item) => item?.variant?.product?.id)
-    ?.filter(Boolean)
-    ?.map((id) => shopifyIdHelper(id, true));
-
-  const productIdsString = productIds.join(',');
-
   const productNames = lineItems?.map(
     (item) => item?.variant?.product?.title || '',
   );
@@ -91,29 +84,73 @@ export function trackPurchaseWithInsider(context) {
   const deliveryProvince = cart?.shippingAddress?.province || 'NA';
   const deliveryCity = cart?.shippingAddress?.city || 'NA';
 
+  const cartItems = cart?.lineItems?.edges?.map((edge) => edge?.node) ?? [];
+  /**
+   * @type {string[]}
+   */
+  const productIds = [];
+  /**
+   * @type {string[]}
+   */
+  const variantIds = [];
+  /**
+   * @type {string[]}
+   */
+  const titles = [];
+  /**
+   * @type {string[]}
+   */
+  const variants = [];
+  /**
+   * @type {string[]}
+   */
+  const selectedOptions = [];
+  /**
+   * @type {number[]}
+   */
+  const quantities = [];
+
+  cartItems?.forEach((item) => {
+    productIds.push(shopifyIdHelper(item?.variant?.product?.id, true));
+    variantIds.push(shopifyIdHelper(item?.variant?.id, true));
+    titles.push(item?.title);
+    variants.push(item?.variant?.title);
+    selectedOptions.push(JSON.stringify(item?.selectedOptions));
+    quantities.push(item?.quantity);
+  });
+
   console.log('[Insider] purchase event fired');
 
-  RNInsider.tagEvent('purchase')
-    .addParameterWithString('prices', pricesString)
-    .addParameterWithString('payment_method', 'NA')
-    .addParameterWithString('order_id', orderId)
-    .addParameterWithString('quantity', quantityString)
-    .addParameterWithString('src', 'appmaker')
-    .addParameterWithString('total_payment', totalAmountString)
-    .addParameterWithString('product_ids', productIdsString)
-    .addParameterWithString('currency', currency)
-    .addParameterWithString('total_amount', totalAmountString)
-    .addParameterWithString('campaign_source', '')
-    .addParameterWithString('delivery_subdistrict', deliverySubdistrict)
-    .addParameterWithString('campaign_name', 'NA')
-    .addParameterWithString('voucher_used', 'NA')
-    .addParameterWithString('purchase_date', purchaseDate)
-    .addParameterWithString('product_names', productNamesString)
-    .addParameterWithString('delivery_postalcode', deliveryPostalCode)
-    .addParameterWithString('total_shipping', 'NA')
-    .addParameterWithString('total_quantity', quantityString)
-    .addParameterWithString('total_discount', totalDiscount)
-    .addParameterWithString('delivery_province', deliveryProvince)
-    .addParameterWithString('delivery_city', deliveryCity)
-    .build();
+  try {
+    RNInsider.tagEvent('purchase')
+      .addParameterWithString('prices', pricesString)
+      .addParameterWithString('payment_method', 'NA')
+      .addParameterWithString('order_id', orderId)
+      .addParameterWithString('quantity', quantityString)
+      .addParameterWithString('src', 'appmaker')
+      .addParameterWithString('total_payment', totalAmountString)
+      .addParameterWithString('currency', currency)
+      .addParameterWithString('total_amount', totalAmountString)
+      .addParameterWithString('campaign_source', '')
+      .addParameterWithString('delivery_subdistrict', deliverySubdistrict)
+      .addParameterWithString('campaign_name', 'NA')
+      .addParameterWithString('voucher_used', 'NA')
+      .addParameterWithString('purchase_date', purchaseDate)
+      .addParameterWithString('product_names', productNamesString)
+      .addParameterWithString('delivery_postalcode', deliveryPostalCode)
+      .addParameterWithString('total_shipping', 'NA')
+      .addParameterWithString('total_quantity', quantityString)
+      .addParameterWithString('total_discount', totalDiscount)
+      .addParameterWithString('delivery_province', deliveryProvince)
+      .addParameterWithString('delivery_city', deliveryCity)
+      .addParameterWithArray('product_ids', productIds)
+      .addParameterWithArray('variant_ids', variantIds)
+      .addParameterWithArray('titles', titles)
+      .addParameterWithArray('variants', variants)
+      .addParameterWithArray('selected_options', selectedOptions)
+      .addParameterWithArray('quantities', quantities)
+      .build();
+  } catch (error) {
+    console.log('[Insider][trackPurchaseWithInsider] Error:', error);
+  }
 }

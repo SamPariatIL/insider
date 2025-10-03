@@ -40,18 +40,6 @@ try {
 }
 // -----------------------------
 
-const analyticsSetProfile = (params) => {
-  const currentUser = RNInsider.getCurrentUser();
-  const identifiers = new RNInsiderIdentifier();
-
-  if (params?.email) identifiers.addEmail(params.email);
-  if (params?.phone) identifiers.addPhoneNumber(params.phone);
-  if (params?.id) identifiers.addUserID(params.id);
-
-  currentUser.login(identifiers);
-  currentUser.build();
-};
-
 const recordEvent = async (eventName, params, eventObject) => {
   try {
     const insiderEventData = await appmaker.applyFilters('insiderEventData', {
@@ -161,4 +149,4 @@ const configureAnalytics = async () => {
   }
 };
 
-export { analyticsSetProfile, configureAnalytics, recordEvent };
+export { configureAnalytics, recordEvent };
