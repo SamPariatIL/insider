@@ -74,7 +74,7 @@ export function trackPurchaseWithInsider(context) {
 
   if (!cart || !eventParams) return;
 
-  const orderId = eventParams?.order_id ?? '';
+  const orderId = eventParams?.order_name ?? '';
   const cartItems = cart?.lineItems?.edges?.map((edge) => edge?.node) ?? [];
 
   try {
