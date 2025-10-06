@@ -175,17 +175,6 @@ const activateEvents = () => {
         break;
 
       case 'checkout_completed':
-        const firstLineItem = context?.cart?.lineItems?.edges?.[0]?.node;
-
-        const checkoutProduct = mapLineItemToInsiderProduct(firstLineItem);
-
-        RNInsider.itemPurchased(
-          context?.eventParams?.id ??
-            context?.eventParams?.order_number ??
-            context?.eventParams?.order_name,
-          checkoutProduct,
-        );
-
         trackPurchaseWithInsider(context);
         break;
 
