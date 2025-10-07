@@ -49,19 +49,19 @@ export function mapLineItemToInsiderProduct(lineItem) {
     lineItem.discountAllocations?.[0]?.allocatedAmount?.amount ?? '0',
   );
   const currency = variant.price?.currencyCode ?? 'IDR';
-  const discountAmount = compareAtPrice - price - discount;
+  const quantity = lineItem?.quantity || 1;
 
   const insiderProduct = RNInsider.createNewProduct(
     productID,
     name,
     taxonomy,
     imageURL,
-    price,
+    compareAtPrice,
     currency,
   );
 
-  insiderProduct.setQuantity(lineItem?.quantity);
-  insiderProduct.setPromotionDiscount(discountAmount);
+  insiderProduct.setQuantity(quantity);
+  insiderProduct.setPromotionDiscount(discount / quantity);
   insiderProduct.setSalePrice(price);
 
   return insiderProduct;
