@@ -45,8 +45,11 @@ export function mapLineItemToInsiderProduct(lineItem) {
   const imageURL = product.images?.edges?.[0]?.node?.url ?? '';
   const compareAtPrice = parseFloat(variant.compareAtPrice?.amount) ?? 0;
   const price = parseFloat(variant.price?.amount) ?? 0;
+  const discount = parseFloat(
+    lineItem.discountAllocations?.[0]?.allocatedAmount?.amount ?? '0',
+  );
   const currency = variant.price?.currencyCode ?? 'IDR';
-  const discountAmount = compareAtPrice - price;
+  const discountAmount = compareAtPrice - price - discount;
 
   const insiderProduct = RNInsider.createNewProduct(
     productID,

@@ -112,7 +112,7 @@ const configureAnalytics = async () => {
       : supportedCallbacks;
 
   RNInsider.init(
-    'mataharitest',
+    'matahari',
     'group.com.useinsider.InsiderDemo',
     (type, data) => {
       if (!filteredCallbacks.includes(type)) {
