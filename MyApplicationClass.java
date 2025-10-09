@@ -10,7 +10,7 @@ public class MyApplicationClass extends Application {
         super.onCreate();
 
         // Initialize Insider SDK
-        Insider.Instance.init(this, "matahari");
+        Insider.Instance.init(this, "mataharistore");
 
         // Optional: Set log to confirm initialization
         Log.d("MyApplicationClass", "✅ Insider SDK initialized in Application class");
