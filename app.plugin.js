@@ -175,7 +175,7 @@ configurations.all {
         if (!p1.includes('manifestPlaceholders')) {
           return match.replace(
             p1,
-            `${p1}\n        manifestPlaceholders = [partner: \"mataharistore\"]`,
+            `${p1}\n        manifestPlaceholders = [partner: \"matahari\"]`,
           );
         }
         return match;
